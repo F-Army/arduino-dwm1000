@@ -71,7 +71,12 @@ namespace DW1000Ng {
 	@param[in] rst The reset line/pin for hard resets of ICs that connect to the Arduino. Value 0xff means soft reset.
 	*/
 	void initializeNoInterrupt(uint8_t ss, uint8_t rst = 0xff);
-	
+
+	/**
+	Unregister any active interrupt handlers in preparation for reconfiguration
+	*/
+	void shutDown(void);
+
 	/** 
 	Enable debounce Clock, used to clock the LED blinking
 	*/
@@ -417,6 +422,10 @@ namespace DW1000Ng {
 	By default this is attached to the interrupt pin callback
 	*/
 	void interruptServiceRoutine();
+#ifdef ESP32
+	void handlerDispatcher(void *);
+	unsigned long long getNumInterrupts(void);
+#endif
 	
 	boolean isTransmitDone();
 
