@@ -41,19 +41,28 @@ namespace DW1000NgRanging {
                                     uint64_t timeRangeReceived
                                 )
     {
-        uint32_t timePollSent_32 = static_cast<uint32_t>(timePollSent);
-        uint32_t timePollReceived_32 = static_cast<uint32_t>(timePollReceived);
-        uint32_t timePollAckSent_32 = static_cast<uint32_t>(timePollAckSent);
-        uint32_t timePollAckReceived_32 = static_cast<uint32_t>(timePollAckReceived);
-        uint32_t timeRangeSent_32 = static_cast<uint32_t>(timeRangeSent);
-        uint32_t timeRangeReceived_32 = static_cast<uint32_t>(timeRangeReceived);
-        
-        double round1 = static_cast<double>(timePollAckReceived_32 - timePollSent_32);
-        double reply1 = static_cast<double>(timePollAckSent_32 - timePollReceived_32);
-        double round2 = static_cast<double>(timeRangeReceived_32 - timePollAckSent_32);
-        double reply2 = static_cast<double>(timeRangeSent_32 - timePollAckReceived_32);
+        uint64_t round1 = timePollAckReceived - timePollSent;
+        uint64_t reply1 = timePollAckSent - timePollReceived;
+        uint64_t round2 = timeRangeReceived - timePollAckSent;
+        uint64_t reply2 = timeRangeSent - timePollAckReceived;
 
-        int64_t tof_uwb = static_cast<int64_t>((round1 * round2 - reply1 * reply2) / (round1 + round2 + reply1 + reply2));
+        int64_t dividend = round1 * round2 - reply1 * reply2;
+        uint64_t divisor = round1 + round2 + reply1 + reply2;
+
+        /* Work around a bug in the GCC shipped with the ESP32 IDF for Arduino
+           that fails to preserve sign on int64_t division and would therefore
+           hide measurement inconsistencies elsewhere in the design.  */
+        bool isNegative = false;
+        if (dividend < 0) {
+            isNegative = true;
+            dividend = -dividend;
+        }
+
+        int64_t tof_uwb = dividend / divisor;
+
+        /* Reapply preserved sign */
+        if (isNegative) tof_uwb = -tof_uwb;
+
         double distance = tof_uwb * DISTANCE_OF_RADIO;
 
         return distance;
